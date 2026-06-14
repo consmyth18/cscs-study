@@ -968,15 +968,6 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
           ) : (
             <div className="plan-list">{todoItems.map(item => renderItem(item, todoItems))}</div>
           )}
-          {doneItems.length > 0 && (
-            <React.Fragment>
-              <div className="plan-sublabel-row">
-                <div className="plan-sublabel">Completed</div>
-                {doneTotalsLabel && <div className="plan-totals">— {doneTotalsLabel}</div>}
-              </div>
-              <div className="plan-list">{doneItems.map(item => renderItem(item, doneItems))}</div>
-            </React.Fragment>
-          )}
         </React.Fragment>
       )}
       {adding ? (
@@ -988,6 +979,15 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         />
       ) : (
         <button className="plan-add-btn" onClick={() => setAdding(true)}>+ Add plan item</button>
+      )}
+      {doneItems.length > 0 && (
+        <React.Fragment>
+          <div className="plan-sublabel-row">
+            <div className="plan-sublabel">Completed</div>
+            {doneTotalsLabel && <div className="plan-totals">— {doneTotalsLabel}</div>}
+          </div>
+          <div className="plan-list">{doneItems.map(item => renderItem(item, doneItems))}</div>
+        </React.Fragment>
       )}
     </div>
   );
