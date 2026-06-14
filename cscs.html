@@ -491,6 +491,43 @@ function saveData(data) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch (e) {}
 }
 
+// ── YouTube deep-linking ────────────────────────────────────────────────
+function getYoutubeVideoId(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (u.pathname === '/watch') return u.searchParams.get('v');
+      const shortsMatch = u.pathname.match(/^\/shorts\/([\w-]+)/);
+      if (shortsMatch) return shortsMatch[1];
+    }
+  } catch (e) {}
+  return null;
+}
+
+// Opens YouTube links directly in the YouTube app on mobile, falling back
+// to the normal web link if the app isn't installed (or on desktop).
+function openLink(url) {
+  const videoId = getYoutubeVideoId(url);
+  if (!videoId) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const appUrl = isIOS
+    ? `youtube://www.youtube.com/watch?v=${videoId}`
+    : `vnd.youtube://${videoId}`;
+  let opened = false;
+  const onBlur = () => { opened = true; };
+  window.addEventListener('blur', onBlur);
+  window.location.href = appUrl;
+  setTimeout(() => {
+    window.removeEventListener('blur', onBlur);
+    if (!opened) window.open(url, '_blank', 'noopener,noreferrer');
+  }, 800);
+}
+
 // ── GitHub Gist sync ─────────────────────────────────────────────────────
 const SYNC_KEY = 'cscs_sync_v1';
 const TS_KEY = 'cscs_v1_ts';
@@ -769,7 +806,13 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         >{item.done ? '✓' : ''}</button>
         <div className="plan-item-body">
           {link ? (
-            <a className={`plan-text-link ${item.done ? 'done' : ''}`} href={link} target="_blank" rel="noopener noreferrer">{item.text}</a>
+            <a
+              className={`plan-text-link ${item.done ? 'done' : ''}`}
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => { e.preventDefault(); openLink(link); }}
+            >{item.text}</a>
           ) : (
             <span className={`plan-text ${item.done ? 'done' : ''}`}>{item.text}</span>
           )}
