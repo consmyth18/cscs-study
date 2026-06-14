@@ -1227,8 +1227,27 @@ function App() {
 
   useEffect(() => { saveData(data); }, [data]);
 
+  // Restore the chapter view from the URL on load (e.g. refresh or deep link)
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') setActiveId(null); };
+    const match = window.location.hash.match(/^#chapter-(\d+)$/);
+    if (match) {
+      const id = Number(match[1]);
+      window.history.replaceState({ chapterId: id }, '', window.location.hash);
+      setActiveId(id);
+    }
+  }, []);
+
+  // Let the browser/device back button close the chapter view
+  useEffect(() => {
+    const onPopState = (e) => {
+      setActiveId((e.state && e.state.chapterId) || null);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') closeChapter(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, []);
@@ -1326,7 +1345,16 @@ function App() {
   }, [data, syncConfig.token]);
 
   const openChapter = (id) => {
+    window.history.pushState({ chapterId: id }, '', `#chapter-${id}`);
     setActiveId(id);
+  };
+
+  const closeChapter = () => {
+    if (window.history.state && window.history.state.chapterId) {
+      window.history.back();
+    } else {
+      setActiveId(null);
+    }
   };
 
   const updateChapter = (id, nextState) => {
@@ -1459,7 +1487,7 @@ function App() {
         <ChapterPage
           chapter={activeChapter}
           state={activeState}
-          onBack={() => setActiveId(null)}
+          onBack={closeChapter}
           onUpdate={(next) => updateChapter(activeChapter.id, next)}
           categories={data.categories || []}
           onToggleCategory={(itemId, catId) => toggleItemCategory(activeChapter.id, itemId, catId)}
