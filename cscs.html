@@ -221,6 +221,14 @@
   .plan-item.drag-over { background: var(--blue-light); }
   .plan-drag-handle { flex-shrink: 0; width: 14px; margin-top: 2px; color: var(--text-muted); font-size: 13px; cursor: grab; opacity: 0; transition: opacity 0.15s; text-align: center; }
   .plan-item:hover .plan-drag-handle { opacity: 1; }
+  .plan-move-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; margin-top: 1px; }
+  .plan-move-btn {
+    width: 16px; height: 13px; padding: 0; border: none; background: none; cursor: pointer;
+    color: var(--text-muted); font-size: 9px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s;
+  }
+  .plan-move-btn:hover { color: var(--blue-text); }
+  .plan-move-btn:disabled { opacity: 0.25; cursor: default; }
   .plan-checkbox-btn {
     flex-shrink: 0; width: 16px; height: 16px; border-radius: 4px; margin-top: 1px;
     border: 1px solid var(--border2); background: var(--surface);
@@ -324,6 +332,14 @@
   .focus-row.in-progress { background: var(--blue-light); border: 1px solid var(--blue-mid); box-shadow: 0 2px 8px rgba(75,156,211,0.15); }
   .focus-row.complete { background: var(--blue); border: 1px solid var(--blue-dark); }
   .focus-drag-handle { color: var(--text-muted); font-size: 16px; cursor: grab; flex-shrink: 0; }
+  .focus-move-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .focus-move-btn {
+    width: 24px; height: 20px; padding: 0; border: none; background: none; cursor: pointer;
+    color: var(--text-muted); font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s;
+  }
+  .focus-move-btn:hover { color: var(--blue-text); }
+  .focus-move-btn:disabled { opacity: 0.25; cursor: default; }
   .focus-main { flex: 1; min-width: 0; cursor: pointer; }
   .focus-number { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
   .focus-row.in-progress .focus-number { color: var(--blue-text); }
@@ -784,10 +800,23 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
     setDragOverId(null);
   };
 
-  const renderItem = (item) => {
+  const moveItem = (group, itemId, direction) => {
+    const idx = group.findIndex(p => p.id === itemId);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= group.length) return;
+    const otherId = group[swapIdx].id;
+    const next = [...plan];
+    const a = next.findIndex(p => p.id === itemId);
+    const b = next.findIndex(p => p.id === otherId);
+    [next[a], next[b]] = [next[b], next[a]];
+    onReorder(next);
+  };
+
+  const renderItem = (item, group) => {
     const link = item.link || (item.links && item.links[0] && item.links[0].url) || null;
     const tagIds = item.categories || [];
     const assigned = categories.filter(c => tagIds.includes(c.id));
+    const idx = group.findIndex(p => p.id === item.id);
     return (
       <div
         className={`plan-item ${dragId === item.id ? 'dragging' : ''} ${dragOverId === item.id ? 'drag-over' : ''}`}
@@ -800,6 +829,10 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         onDragEnd={() => { setDragId(null); setDragOverId(null); }}
       >
         <span className="plan-drag-handle">⠿</span>
+        <div className="plan-move-btns">
+          <button className="plan-move-btn" onClick={() => moveItem(group, item.id, 'up')} disabled={idx === 0} aria-label="Move up">▲</button>
+          <button className="plan-move-btn" onClick={() => moveItem(group, item.id, 'down')} disabled={idx === group.length - 1} aria-label="Move down">▼</button>
+        </div>
         <button
           className={`plan-checkbox-btn ${item.done ? 'checked' : ''}`}
           onClick={() => onToggle(item.id)}
@@ -856,12 +889,12 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
           {todoItems.length === 0 ? (
             <div className="plan-empty">Nothing left to do.</div>
           ) : (
-            <div className="plan-list">{todoItems.map(renderItem)}</div>
+            <div className="plan-list">{todoItems.map(item => renderItem(item, todoItems))}</div>
           )}
           {doneItems.length > 0 && (
             <React.Fragment>
               <div className="plan-sublabel">Completed</div>
-              <div className="plan-list">{doneItems.map(renderItem)}</div>
+              <div className="plan-list">{doneItems.map(item => renderItem(item, doneItems))}</div>
             </React.Fragment>
           )}
         </React.Fragment>
@@ -983,6 +1016,18 @@ function FocusTab({ data, onReorder, onToggleStar, onToggleHidden, onOpen }) {
     setDragOverId(null);
   };
 
+  const moveChapter = (id, direction) => {
+    const idx = visibleChapters.findIndex(c => c.id === id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= visibleChapters.length) return;
+    const otherId = visibleChapters[swapIdx].id;
+    const next = [...orderedIds];
+    const a = next.indexOf(id);
+    const b = next.indexOf(otherId);
+    [next[a], next[b]] = [next[b], next[a]];
+    onReorder(next);
+  };
+
   return (
     <div>
       <div className="focus-heading">Current Focus</div>
@@ -993,7 +1038,7 @@ function FocusTab({ data, onReorder, onToggleStar, onToggleHidden, onOpen }) {
         <React.Fragment>
           {visibleChapters.length > 0 && (
             <div className="focus-list">
-              {visibleChapters.map(chapter => {
+              {visibleChapters.map((chapter, idx) => {
                 const state = getChapterState(data, chapter.id);
                 const statusClass = state.status === 'in_progress' ? 'in-progress' : state.status === 'complete' ? 'complete' : '';
                 const totalPlan = state.plan.length;
@@ -1011,6 +1056,10 @@ function FocusTab({ data, onReorder, onToggleStar, onToggleHidden, onOpen }) {
                     onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                   >
                     <span className="focus-drag-handle">⠿</span>
+                    <div className="focus-move-btns">
+                      <button className="focus-move-btn" onClick={() => moveChapter(chapter.id, 'up')} disabled={idx === 0} aria-label="Move up">▲</button>
+                      <button className="focus-move-btn" onClick={() => moveChapter(chapter.id, 'down')} disabled={idx === visibleChapters.length - 1} aria-label="Move down">▼</button>
+                    </div>
                     <div className="focus-main" onClick={() => onOpen(chapter.id)}>
                       <div className="focus-number">Chapter {String(chapter.id).padStart(2, '0')}</div>
                       <div className="focus-title">{chapter.title}</div>
