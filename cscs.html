@@ -535,18 +535,22 @@ function openLink(url) {
     window.open(url, '_blank', 'noopener,noreferrer');
     return;
   }
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const appUrl = isIOS
-    ? `youtube://www.youtube.com/watch?v=${videoId}`
-    : `vnd.youtube://${videoId}`;
-  let opened = false;
-  const onBlur = () => { opened = true; };
-  window.addEventListener('blur', onBlur);
-  window.location.href = appUrl;
-  setTimeout(() => {
-    window.removeEventListener('blur', onBlur);
-    if (!opened) window.open(url, '_blank', 'noopener,noreferrer');
-  }, 800);
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) {
+    // iOS: try the YouTube app's URL scheme. If it's not installed, iOS
+    // silently no-ops and the page stays put (no extra tab).
+    window.location.href = `youtube://www.youtube.com/watch?v=${videoId}`;
+    return;
+  }
+  if (/Android/.test(ua)) {
+    // Android: an intent URL opens the YouTube app directly, with the
+    // fallback to the web link handled by the OS itself — avoids the
+    // extra-tab issue that JS-timeout-based fallbacks cause in Chrome.
+    window.location.href =
+      `intent://www.youtube.com/watch?v=${videoId}#Intent;package=com.google.android.youtube;scheme=https;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 // ── GitHub Gist sync ─────────────────────────────────────────────────────
