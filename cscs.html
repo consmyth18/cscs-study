@@ -213,10 +213,14 @@
   .plan-section { margin-bottom: 1.5rem; }
   .plan-sublabel {
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
-    color: var(--text-muted); font-weight: 500; margin: 0.9rem 0 0.4rem;
+    color: var(--text-muted); font-weight: 500; margin: 0;
   }
-  .plan-sublabel:first-of-type { margin-top: 0; }
-  .plan-totals { font-size: 11px; color: var(--text-muted); margin: -0.2rem 0 0.5rem; }
+  .plan-sublabel-row {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    margin: 0.9rem 0 0.4rem;
+  }
+  .plan-sublabel-row:first-of-type { margin-top: 0; }
+  .plan-totals { font-size: 11px; color: var(--text-muted); }
   .plan-list { display: flex; flex-direction: column; }
   .plan-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-radius: 6px; transition: opacity 0.15s, background 0.15s; }
   .plan-item.dragging { opacity: 0.4; }
@@ -945,8 +949,8 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
 
   const todoItems = plan.filter(item => !item.done);
   const doneItems = plan.filter(item => item.done);
-  const todoTotals = sumEstimates(todoItems);
-  const todoTotalsLabel = formatEstimateTotals(todoTotals);
+  const todoTotalsLabel = formatEstimateTotals(sumEstimates(todoItems));
+  const doneTotalsLabel = formatEstimateTotals(sumEstimates(doneItems));
 
   return (
     <div className="plan-section">
@@ -955,8 +959,10 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         <div className="plan-empty">No plan yet — add what you'd like to work through.</div>
       ) : (
         <React.Fragment>
-          <div className="plan-sublabel">To Do</div>
-          {todoTotalsLabel && <div className="plan-totals">Total: {todoTotalsLabel}</div>}
+          <div className="plan-sublabel-row">
+            <div className="plan-sublabel">To Do</div>
+            {todoTotalsLabel && <div className="plan-totals">{todoTotalsLabel}</div>}
+          </div>
           {todoItems.length === 0 ? (
             <div className="plan-empty">Nothing left to do.</div>
           ) : (
@@ -964,7 +970,10 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
           )}
           {doneItems.length > 0 && (
             <React.Fragment>
-              <div className="plan-sublabel">Completed</div>
+              <div className="plan-sublabel-row">
+                <div className="plan-sublabel">Completed</div>
+                {doneTotalsLabel && <div className="plan-totals">{doneTotalsLabel}</div>}
+              </div>
               <div className="plan-list">{doneItems.map(item => renderItem(item, doneItems))}</div>
             </React.Fragment>
           )}
