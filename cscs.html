@@ -216,7 +216,7 @@
     color: var(--text-muted); font-weight: 500; margin: 0;
   }
   .plan-sublabel-row {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    display: flex; align-items: baseline; gap: 6px;
     margin: 0.9rem 0 0.4rem;
   }
   .plan-sublabel-row:first-of-type { margin-top: 0; }
@@ -961,7 +961,7 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         <React.Fragment>
           <div className="plan-sublabel-row">
             <div className="plan-sublabel">To Do</div>
-            {todoTotalsLabel && <div className="plan-totals">{todoTotalsLabel}</div>}
+            {todoTotalsLabel && <div className="plan-totals">— {todoTotalsLabel}</div>}
           </div>
           {todoItems.length === 0 ? (
             <div className="plan-empty">Nothing left to do.</div>
@@ -972,7 +972,7 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
             <React.Fragment>
               <div className="plan-sublabel-row">
                 <div className="plan-sublabel">Completed</div>
-                {doneTotalsLabel && <div className="plan-totals">{doneTotalsLabel}</div>}
+                {doneTotalsLabel && <div className="plan-totals">— {doneTotalsLabel}</div>}
               </div>
               <div className="plan-list">{doneItems.map(item => renderItem(item, doneItems))}</div>
             </React.Fragment>
