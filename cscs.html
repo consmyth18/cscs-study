@@ -1071,16 +1071,37 @@ function App() {
     if (!syncConfig.token) return;
     setSyncStatus('syncing');
     setSyncMessage('');
-    const ts = Date.now();
-    setLocalTimestamp(ts);
-    pushGistData(syncConfig.token, syncConfig.gistId, { updatedAt: ts, data })
-      .then(res => {
-        setSyncStatus('synced');
-        if (!syncConfig.gistId && res.id) {
-          const next = { ...syncConfig, gistId: res.id };
-          saveSyncConfig(next);
-          setSyncConfig(next);
+
+    const push = () => {
+      const ts = Date.now();
+      setLocalTimestamp(ts);
+      return pushGistData(syncConfig.token, syncConfig.gistId, { updatedAt: ts, data })
+        .then(res => {
+          setSyncStatus('synced');
+          if (!syncConfig.gistId && res.id) {
+            const next = { ...syncConfig, gistId: res.id };
+            saveSyncConfig(next);
+            setSyncConfig(next);
+          }
+        });
+    };
+
+    if (!syncConfig.gistId) {
+      push().catch(err => { setSyncStatus('error'); setSyncMessage(err.message); });
+      return;
+    }
+
+    // Check the gist first — if it's newer than what we have, pull instead of overwriting it.
+    fetchGistData(syncConfig.token, syncConfig.gistId)
+      .then(remote => {
+        if (remote && remote.data && (remote.updatedAt || 0) > getLocalTimestamp()) {
+          skipNextPush.current = true;
+          setLocalTimestamp(remote.updatedAt);
+          setData(remote.data);
+          setSyncStatus('synced');
+          return;
         }
+        return push();
       })
       .catch(err => { setSyncStatus('error'); setSyncMessage(err.message); });
   };
