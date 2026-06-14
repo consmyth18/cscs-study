@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSCS</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  :root {
+    --bg:         #FAFAFA;
+    --surface:    #FFFFFF;
+    --surface2:   #E9F0F7;
+    --border:     #D7E4F0;
+    --border2:    #B8CFE3;
+    --text:       #000000;
+    --text-dim:   #404040;
+    --text-muted: #969696;
+    --blue:       #4B9CD3;
+    --blue-light: rgba(75,156,211,0.12);
+    --blue-mid:   rgba(75,156,211,0.4);
+    --blue-text:  #1E5C8C;
+    --blue-dark:  #13294B;
+    --green-soft: #8FC4A0;
+    --gold:       #E0B85A;
+    --color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  #root { min-height: 100vh; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Header */
+  .header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250,250,250,0.96);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: baseline; gap: 14px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); letter-spacing: -0.3px; }
+  .header-date { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+  .header-count { font-size: 12px; color: var(--text-muted); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .tab-group { display: flex; gap: 2px; background: var(--border); border-radius: 8px; padding: 3px; }
+  .tab-btn {
+    background: transparent; border: 1px solid transparent; color: var(--text-muted);
+    padding: 5px 16px; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 400;
+    letter-spacing: 0.05em; border-radius: 5px; cursor: pointer;
+    transition: background-color 0.18s ease, color 0.18s ease;
+    outline: none; user-select: none;
+  }
+  .tab-btn:hover { color: var(--text-dim); }
+  .tab-btn.active { background: var(--surface); color: var(--text); }
+
+  /* Sync */
+  .sync-panel-wrap { position: relative; }
+  .sync-btn {
+    background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    color: var(--text-muted); font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    padding: 4px 8px; border-radius: 6px; transition: color 0.15s, background 0.15s;
+  }
+  .sync-btn:hover { color: var(--text-dim); background: var(--surface2); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+  .sync-dot.synced { background: var(--green-soft); }
+  .sync-dot.syncing { background: var(--gold); animation: sync-pulse 1s infinite; }
+  .sync-dot.error { background: #c0392b; }
+  @keyframes sync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .sync-popover {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 100;
+    display: flex; flex-direction: column; gap: 6px; padding: 0.9rem;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08); width: 300px;
+  }
+  .sync-popover-hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-bottom: 2px; }
+  .sync-popover-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .sync-gist-id-row { display: flex; gap: 6px; align-items: center; }
+  .sync-gist-id-row code { font-size: 11px; background: var(--surface2); padding: 2px 6px; border-radius: 4px; word-break: break-all; flex: 1; }
+  .sync-copy-btn {
+    background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    font-size: 10px; padding: 3px 8px; color: var(--text-dim); font-family: 'DM Sans', sans-serif;
+  }
+  .sync-copy-btn:hover { border-color: var(--border2); }
+  .sync-status-line { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .sync-status-line.error { color: #c0392b; }
+
+  /* Content / map */
+  .content { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+
+  .part-section { margin-bottom: 2.5rem; }
+  .part-section:last-child { margin-bottom: 0; }
+  .part-eyebrow {
+    font-size: 15px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-muted); font-weight: 500; margin-bottom: 0.75rem;
+  }
+  .part-line { border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .card-row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  /* Chapter cards */
+  .chapter-card {
+    width: 160px; padding: 0.875rem; border-radius: 12px; cursor: pointer;
+    transition: all 0.15s ease; border: 1px solid var(--border);
+    background: var(--surface2); position: relative;
+  }
+  .chapter-card:hover { border-color: var(--border2); }
+  .chapter-card.in-progress {
+    background: var(--blue-light);
+    border: 1px solid var(--blue-mid);
+    box-shadow: 0 2px 8px rgba(75,156,211,0.15);
+  }
+  .chapter-card.in-progress:hover { border-color: var(--blue); }
+  .chapter-card.complete {
+    background: var(--blue);
+    border: 1px solid var(--blue-dark);
+  }
+  .chapter-card.complete:hover { border-color: var(--blue-dark); opacity: 0.95; }
+  .chapter-card.starred { box-shadow: 0 0 0 2px var(--gold); }
+  .chapter-card.in-progress.starred { box-shadow: 0 0 0 2px var(--gold), 0 2px 8px rgba(75,156,211,0.15); }
+  .card-star-badge {
+    position: absolute; top: 8px; right: 9px; font-size: 13px; line-height: 1;
+    color: var(--gold);
+  }
+
+  .card-number { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 0.4rem; }
+  .chapter-card.in-progress .card-number { color: var(--blue-text); }
+  .chapter-card.complete .card-number { color: rgba(255,255,255,0.7); }
+
+  .card-title {
+    font-size: 12px; color: var(--text-dim); line-height: 1.4; font-weight: 400;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+  .chapter-card.in-progress .card-title { color: var(--text); }
+  .chapter-card.complete .card-title { color: #fff; }
+
+  .card-badge {
+    display: inline-block; font-size: 10px; font-weight: 500; letter-spacing: 0.04em;
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .card-badge.in-progress { background: rgba(75,156,211,0.2); color: var(--blue-text); }
+  .card-badge.complete { background: rgba(255,255,255,0.22); color: #fff; }
+
+  .card-plan-indicator { font-size: 10px; color: var(--text-muted); margin-top: 0.35rem; }
+  .chapter-card.complete .card-plan-indicator { color: rgba(255,255,255,0.65); }
+
+  .card-progress-track {
+    height: 4px; border-radius: 999px; background: #fff; overflow: hidden; margin-top: 0.6rem;
+  }
+  .card-progress-fill { height: 100%; border-radius: 999px; background: var(--green-soft); transition: width 0.2s ease; }
+  .chapter-card.complete .card-progress-fill { background: var(--gold); }
+
+  /* Chapter page */
+  .chapter-back-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    letter-spacing: 0.05em; padding: 0; margin-bottom: 1.5rem; transition: color 0.15s;
+  }
+  .chapter-back-btn:hover { color: var(--blue-text); }
+  .chapter-page-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; }
+  .chapter-page-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; margin-bottom: 2rem; }
+  .chapter-page-title { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text); line-height: 1.3; }
+  .chapter-page-status-row { display: flex; gap: 8px; flex-shrink: 0; margin-top: 4px; }
+  .chapter-star-btn {
+    width: 36px; height: 36px; border: 1px solid var(--border2); border-radius: 8px;
+    background: transparent; cursor: pointer; font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .chapter-star-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .chapter-star-btn.starred { color: var(--gold); border-color: var(--gold); background: rgba(224,184,90,0.12); }
+  .chapter-status-btn {
+    padding: 8px 18px; border: 1px solid var(--border2); border-radius: 8px;
+    background: transparent; color: var(--text-dim); font-size: 13px;
+    font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.15s;
+  }
+  .chapter-status-btn:hover { border-color: var(--blue); color: var(--blue-text); }
+  .chapter-status-btn.is-complete { border-color: var(--blue-mid); color: var(--blue-text); background: var(--blue-light); }
+
+  .chapter-page-body { max-width: 640px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em;
+    color: var(--text-muted); font-weight: 500; margin-bottom: 0.875rem;
+  }
+
+  /* Plan section */
+  .plan-section { margin-bottom: 1.5rem; }
+  .plan-sublabel {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--text-muted); font-weight: 500; margin: 0.9rem 0 0.4rem;
+  }
+  .plan-sublabel:first-of-type { margin-top: 0; }
+  .plan-list { display: flex; flex-direction: column; }
+  .plan-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-radius: 6px; transition: opacity 0.15s, background 0.15s; }
+  .plan-item.dragging { opacity: 0.4; }
+  .plan-item.drag-over { background: var(--blue-light); }
+  .plan-drag-handle { flex-shrink: 0; width: 14px; margin-top: 2px; color: var(--text-muted); font-size: 13px; cursor: grab; opacity: 0; transition: opacity 0.15s; text-align: center; }
+  .plan-item:hover .plan-drag-handle { opacity: 1; }
+  .plan-checkbox-btn {
+    flex-shrink: 0; width: 16px; height: 16px; border-radius: 4px; margin-top: 1px;
+    border: 1px solid var(--border2); background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; font-size: 10px; color: #fff;
+  }
+  .plan-checkbox-btn.checked { background: var(--blue); border-color: var(--blue); }
+  .plan-item-body { flex: 1; min-width: 0; }
+  .plan-text { display: block; color: var(--text); line-height: 1.45; }
+  .plan-text.done { color: var(--text-muted); text-decoration: line-through; }
+  .plan-text-link { display: block; line-height: 1.45; color: var(--blue-text); text-decoration: none; }
+  .plan-text-link:hover { text-decoration: underline; }
+  .plan-text-link.done { color: var(--text-muted); text-decoration: line-through; }
+  .plan-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 4px 0 8px; }
+
+  /* Plan item edit */
+  .plan-edit-btn {
+    flex-shrink: 0; background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 13px; line-height: 1; padding: 0 2px;
+    opacity: 0; transition: opacity 0.15s, color 0.15s;
+  }
+  .plan-item:hover .plan-edit-btn { opacity: 1; }
+  .plan-edit-btn:hover { color: var(--blue-text); }
+  .plan-edit-popover {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 0.5rem; padding: 0.75rem;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); max-width: 360px;
+  }
+  .plan-edit-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-muted); font-weight: 500; margin-bottom: -2px;
+  }
+  .plan-edit-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .plan-edit-delete {
+    margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: color 0.15s;
+  }
+  .plan-edit-delete:hover { color: #c0392b; }
+  .plan-link-input {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); padding: 5px 9px; font-size: 12px;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s;
+  }
+  .plan-link-input:focus { border-color: var(--blue-mid); }
+  .plan-link-add-row { display: flex; gap: 6px; align-items: center; }
+  .plan-link-add-confirm {
+    padding: 5px 12px; background: var(--blue); border: none; border-radius: 6px;
+    color: #fff; font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .plan-link-add-confirm:hover { opacity: 0.85; }
+  .plan-link-add-confirm:disabled { opacity: 0.4; cursor: default; }
+  .plan-move-row { display: flex; gap: 6px; align-items: center; }
+  .plan-move-select {
+    flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); padding: 5px 9px; font-size: 12px;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s;
+  }
+  .plan-move-select:focus { border-color: var(--blue-mid); }
+  .plan-link-cancel {
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: color 0.15s;
+  }
+  .plan-link-cancel:hover { color: var(--text-dim); }
+
+  /* Plan item category tags */
+  .plan-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .plan-tag-pill {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em;
+  }
+  .plan-tag-options { display: flex; flex-wrap: wrap; gap: 5px; }
+  .plan-tag-option {
+    font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px;
+    background: var(--surface); color: var(--text-dim); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .plan-tag-option:hover { border-color: var(--border2); }
+  .plan-tag-new-row { display: flex; gap: 6px; }
+
+  .plan-add-btn {
+    display: block; margin: 0.4rem auto 0; background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 12px; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; padding: 4px 0; transition: color 0.15s;
+  }
+  .plan-add-btn:hover { color: var(--blue-text); }
+  .plan-add-popover { margin: 0.5rem auto 0; }
+
+
+  /* Focus tab */
+  .focus-heading { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); margin-bottom: 0.25rem; letter-spacing: -0.3px; }
+  .focus-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.5rem; }
+  .focus-empty { font-size: 13px; color: var(--text-muted); font-style: italic; }
+  .focus-list { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+  .focus-row {
+    display: flex; align-items: center; gap: 16px; padding: 1.25rem 1.5rem; border-radius: 14px;
+    border: 1px solid var(--border); background: var(--surface2);
+    transition: border-color 0.15s ease, opacity 0.15s ease;
+  }
+  .focus-row.dragging { opacity: 0.4; }
+  .focus-row.drag-over { border-color: var(--blue-mid); background: var(--blue-light); }
+  .focus-row.in-progress { background: var(--blue-light); border: 1px solid var(--blue-mid); box-shadow: 0 2px 8px rgba(75,156,211,0.15); }
+  .focus-row.complete { background: var(--blue); border: 1px solid var(--blue-dark); }
+  .focus-drag-handle { color: var(--text-muted); font-size: 16px; cursor: grab; flex-shrink: 0; }
+  .focus-main { flex: 1; min-width: 0; cursor: pointer; }
+  .focus-number { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .focus-row.in-progress .focus-number { color: var(--blue-text); }
+  .focus-row.complete .focus-number { color: rgba(255,255,255,0.7); }
+  .focus-title { font-size: 16px; color: var(--text-dim); line-height: 1.4; margin-bottom: 0.6rem; }
+  .focus-row.in-progress .focus-title { color: var(--text); }
+  .focus-row.complete .focus-title { color: #fff; }
+  .focus-meta-row { display: flex; align-items: center; gap: 12px; }
+  .focus-progress-track { flex: 1; height: 4px; border-radius: 999px; background: #fff; overflow: hidden; max-width: 220px; }
+  .focus-progress-fill { height: 100%; border-radius: 999px; background: var(--green-soft); transition: width 0.2s ease; }
+  .focus-row.complete .focus-progress-fill { background: var(--gold); }
+  .focus-plan-indicator { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+  .focus-row.complete .focus-plan-indicator { color: rgba(255,255,255,0.65); }
+  .focus-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .focus-vis-btn, .focus-star-btn {
+    background: none; border: none; cursor: pointer; font-size: 15px; line-height: 1;
+    color: var(--text-muted); padding: 4px; transition: color 0.15s, transform 0.1s;
+  }
+  .focus-vis-btn:hover { color: var(--text-dim); }
+  .focus-star-btn.starred { color: var(--gold); }
+  .focus-star-btn:hover { transform: scale(1.15); }
+  .focus-row.complete .focus-vis-btn { color: rgba(255,255,255,0.7); }
+  .focus-row.complete .focus-vis-btn:hover { color: #fff; }
+
+  .focus-hidden-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 1rem; }
+  .focus-hidden-chip {
+    display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface); cursor: pointer;
+    transition: border-color 0.15s, opacity 0.15s; opacity: 0.55; font-size: 12px; color: var(--text-dim);
+  }
+  .focus-hidden-chip:hover { opacity: 0.9; border-color: var(--border2); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const CHAPTERS = [
+  // Part I — Exercise and Sport Science
+  { id: 1,  part: 1, partTitle: "Exercise and Sport Science", title: "Structure and Function of Body Systems" },
+  { id: 2,  part: 1, partTitle: "Exercise and Sport Science", title: "Biomechanics of Resistance Exercise" },
+  { id: 3,  part: 1, partTitle: "Exercise and Sport Science", title: "Bioenergetics of Exercise and Training" },
+  { id: 4,  part: 1, partTitle: "Exercise and Sport Science", title: "Endocrine Responses to Resistance Exercise and Training" },
+  { id: 5,  part: 1, partTitle: "Exercise and Sport Science", title: "Adaptations to Anaerobic Training Programs" },
+  { id: 6,  part: 1, partTitle: "Exercise and Sport Science", title: "Adaptations to Aerobic Training Programs" },
+  { id: 7,  part: 1, partTitle: "Exercise and Sport Science", title: "Age-Related Differences and Their Implications for Resistance Training" },
+  { id: 8,  part: 1, partTitle: "Exercise and Sport Science", title: "Sex-Related Differences and Their Implications for Resistance Training" },
+  { id: 9,  part: 1, partTitle: "Exercise and Sport Science", title: "Psychological Foundations of Performance" },
+  // Part II — Nutrition and Performance Enhancement
+  { id: 10, part: 2, partTitle: "Nutrition and Performance Enhancement", title: "Basic Nutritional Factors Affecting Health" },
+  { id: 11, part: 2, partTitle: "Nutrition and Performance Enhancement", title: "Nutrition Strategies for Maximizing Performance" },
+  { id: 12, part: 2, partTitle: "Nutrition and Performance Enhancement", title: "Performance-Enhancing Substances and Methods" },
+  // Part III — Testing and Evaluation
+  { id: 13, part: 3, partTitle: "Testing and Evaluation", title: "Principles of Test Selection and Administration" },
+  { id: 14, part: 3, partTitle: "Testing and Evaluation", title: "Administration, Scoring, and Interpretation of Selected Tests" },
+  // Part IV — Exercise Technique
+  { id: 15, part: 4, partTitle: "Exercise Technique", title: "Performance Preparation, Mobility, and Flexibility" },
+  { id: 16, part: 4, partTitle: "Exercise Technique", title: "Exercise Technique for Free Weight and Machine Training" },
+  { id: 17, part: 4, partTitle: "Exercise Technique", title: "Exercise Technique for Alternative Modes and Nontraditional Implement Training" },
+  // Part V — Program Design
+  { id: 18, part: 5, partTitle: "Program Design", title: "Program Design for Resistance Training" },
+  { id: 19, part: 5, partTitle: "Program Design", title: "Program Design and Technique for Plyometric Training" },
+  { id: 20, part: 5, partTitle: "Program Design", title: "Program Design and Technique for Speed and Agility Training" },
+  { id: 21, part: 5, partTitle: "Program Design", title: "Program Design and Technique for Aerobic Endurance and Metabolic Training Programs" },
+  { id: 22, part: 5, partTitle: "Program Design", title: "Periodization" },
+  // Part VI — Organization, Administration, and Recovery
+  { id: 23, part: 6, partTitle: "Organization, Administration, and Recovery", title: "Rehabilitation, Reconditioning, and Medical Issues" },
+  { id: 24, part: 6, partTitle: "Organization, Administration, and Recovery", title: "Overreaching, Overtraining, and Recovery" },
+  { id: 25, part: 6, partTitle: "Organization, Administration, and Recovery", title: "Facility Design, Layout, and Organization" },
+  { id: 26, part: 6, partTitle: "Organization, Administration, and Recovery", title: "Facility Policies, Procedures, and Legal Issues" },
+];
+
+const PART_NUMERALS = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI' };
+
+const CATEGORY_COLORS = ['#4B9CD3', '#8FC4A0', '#E0B85A', '#C77DFF', '#FF8FAB', '#7DD3C0', '#F4A261', '#A78BFA'];
+
+const LS_KEY = 'cscs_v1';
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function fmtHeaderDate() {
+  const d = new Date();
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function loadData() {
+  let data = { chapters: {} };
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_KEY));
+    if (raw && raw.chapters) data = raw;
+  } catch (e) {}
+  if (!Array.isArray(data.focusOrder)) data.focusOrder = [];
+  if (!Array.isArray(data.focusHidden)) data.focusHidden = [];
+  if (!Array.isArray(data.categories)) data.categories = [];
+  Object.keys(data.chapters).forEach(id => {
+    const c = data.chapters[id];
+    if (c.status === 'in_progress' && !(c.plan || []).some(p => p.done)) {
+      c.status = 'not_started';
+    }
+  });
+  return data;
+}
+
+function saveData(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch (e) {}
+}
+
+// ── GitHub Gist sync ─────────────────────────────────────────────────────
+const SYNC_KEY = 'cscs_sync_v1';
+const TS_KEY = 'cscs_v1_ts';
+const GIST_FILENAME = 'cscs-progress.json';
+
+function loadSyncConfig() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SYNC_KEY));
+    if (raw && typeof raw === 'object') return { token: raw.token || '', gistId: raw.gistId || '' };
+  } catch (e) {}
+  return { token: '', gistId: '' };
+}
+
+function saveSyncConfig(cfg) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); } catch (e) {}
+}
+
+function getLocalTimestamp() {
+  return parseInt(localStorage.getItem(TS_KEY) || '0', 10);
+}
+
+function setLocalTimestamp(ts) {
+  try { localStorage.setItem(TS_KEY, String(ts)); } catch (e) {}
+}
+
+async function fetchGistData(token, gistId) {
+  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' },
+  });
+  if (!res.ok) throw new Error(`fetch failed (${res.status})`);
+  const json = await res.json();
+  const file = json.files && json.files[GIST_FILENAME];
+  if (!file || !file.content) return null;
+  return JSON.parse(file.content);
+}
+
+async function pushGistData(token, gistId, payload) {
+  const body = {
+    description: 'CSCS study progress (auto-synced, do not edit manually)',
+    files: { [GIST_FILENAME]: { content: JSON.stringify(payload) } },
+  };
+  let url = 'https://api.github.com/gists';
+  let method = 'POST';
+  if (gistId) {
+    url += `/${gistId}`;
+    method = 'PATCH';
+  } else {
+    body.public = false;
+  }
+  const res = await fetch(url, {
+    method,
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`sync failed (${res.status})`);
+  return res.json();
+}
+
+function getChapterState(data, id) {
+  const c = data.chapters[id];
+  if (!c) return { status: 'not_started', plan: [], starred: false };
+  return { starred: false, ...c };
+}
+
+// ── ChapterCard ──────────────────────────────────────────────────────────
+function ChapterCard({ chapter, state, onClick }) {
+  const status = state.status;
+  const totalPlan = state.plan.length;
+  const doneCount = state.plan.filter(p => p.done).length;
+  const progress = status === 'complete' ? 1 : (totalPlan > 0 ? doneCount / totalPlan : 0);
+
+  return (
+    <div className={`chapter-card ${status === 'in_progress' ? 'in-progress' : status === 'complete' ? 'complete' : ''}${state.starred ? ' starred' : ''}`} onClick={onClick}>
+      {state.starred && <span className="card-star-badge">★</span>}
+      <div className="card-number">{String(chapter.id).padStart(2, '0')}</div>
+      <div className="card-title">{chapter.title}</div>
+      {status === 'in_progress' && <span className="card-badge in-progress">In Progress</span>}
+      {status === 'complete' && <span className="card-badge complete">✓ Complete</span>}
+      <div className="card-progress-track">
+        <div className="card-progress-fill" style={{ width: `${progress * 100}%` }}></div>
+      </div>
+      {totalPlan > 0 && <div className="card-plan-indicator">{doneCount}/{totalPlan} done</div>}
+    </div>
+  );
+}
+
+// ── PlanItemEditor ───────────────────────────────────────────────────────
+function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, onCreateCategory, onSave, onDelete, onMove, onClose }) {
+  const [text, setText] = useState(item.text);
+  const [link, setLink] = useState(item.link || (item.links && item.links[0] && item.links[0].url) || '');
+  const [newLabel, setNewLabel] = useState('');
+  const [moveTarget, setMoveTarget] = useState('');
+  const tagIds = item.categories || [];
+  const otherChapters = CHAPTERS.filter(c => c.id !== currentChapterId);
+
+  const save = () => {
+    const t = text.trim();
+    if (!t) return;
+    onSave({ text: t, link: link.trim() || null });
+    onClose();
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') save();
+    if (e.key === 'Escape') onClose();
+  };
+
+  const submitNewCategory = () => {
+    const t = newLabel.trim();
+    if (!t) return;
+    onCreateCategory(t);
+    setNewLabel('');
+  };
+
+  return (
+    <div className="plan-edit-popover">
+      <div className="plan-edit-label">Task</div>
+      <input className="plan-link-input" autoFocus value={text} onChange={e => setText(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Link</div>
+      <input className="plan-link-input" value={link} placeholder="https://..." onChange={e => setLink(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Tags</div>
+      {categories.length > 0 && (
+        <div className="plan-tag-options">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              className="plan-tag-option"
+              style={tagIds.includes(cat.id) ? { background: cat.color + '22', color: cat.color, borderColor: cat.color } : {}}
+              onClick={() => onToggleCategory(cat.id)}
+            >{cat.label}</button>
+          ))}
+        </div>
+      )}
+      <div className="plan-tag-new-row">
+        <input
+          className="plan-link-input"
+          value={newLabel}
+          placeholder="New category..."
+          onChange={e => setNewLabel(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submitNewCategory(); }}
+        />
+        <button className="plan-link-add-confirm" onClick={submitNewCategory}>Add</button>
+      </div>
+      <div className="plan-edit-actions">
+        <button className="plan-link-add-confirm" onClick={save}>Save</button>
+        <button className="plan-link-cancel" onClick={onClose}>Cancel</button>
+        <button className="plan-edit-delete" onClick={onDelete}>Delete task</button>
+      </div>
+      <div className="plan-edit-label">Move to chapter</div>
+      <div className="plan-move-row">
+        <select className="plan-move-select" value={moveTarget} onChange={e => setMoveTarget(e.target.value)}>
+          <option value="">Select chapter...</option>
+          {otherChapters.map(c => (
+            <option key={c.id} value={c.id}>Ch. {String(c.id).padStart(2, '0')} — {c.title}</option>
+          ))}
+        </select>
+        <button
+          className="plan-link-add-confirm"
+          disabled={!moveTarget}
+          onClick={() => { onMove(Number(moveTarget)); onClose(); }}
+        >Move</button>
+      </div>
+    </div>
+  );
+}
+
+// ── PlanAddForm ──────────────────────────────────────────────────────────
+function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
+  const [text, setText] = useState('');
+  const [link, setLink] = useState('');
+  const [selected, setSelected] = useState([]);
+  const [newLabel, setNewLabel] = useState('');
+
+  const toggleCategory = (catId) => {
+    setSelected(s => s.includes(catId) ? s.filter(c => c !== catId) : [...s, catId]);
+  };
+
+  const submitNewCategory = () => {
+    const t = newLabel.trim();
+    if (!t) return;
+    const newId = onCreateCategory(t);
+    setSelected(s => [...s, newId]);
+    setNewLabel('');
+  };
+
+  const submit = () => {
+    const t = text.trim();
+    if (!t) return;
+    onAdd(t, link.trim() || null, selected);
+    setText('');
+    setLink('');
+    setSelected([]);
+    setNewLabel('');
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') submit();
+    if (e.key === 'Escape') onCancel();
+  };
+
+  return (
+    <div className="plan-edit-popover plan-add-popover">
+      <div className="plan-edit-label">Task</div>
+      <input className="plan-link-input" autoFocus value={text} placeholder="Plan item..." onChange={e => setText(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Link</div>
+      <input className="plan-link-input" value={link} placeholder="https://..." onChange={e => setLink(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Tags</div>
+      {categories.length > 0 && (
+        <div className="plan-tag-options">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              className="plan-tag-option"
+              style={selected.includes(cat.id) ? { background: cat.color + '22', color: cat.color, borderColor: cat.color } : {}}
+              onClick={() => toggleCategory(cat.id)}
+            >{cat.label}</button>
+          ))}
+        </div>
+      )}
+      <div className="plan-tag-new-row">
+        <input
+          className="plan-link-input"
+          value={newLabel}
+          placeholder="New category..."
+          onChange={e => setNewLabel(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submitNewCategory(); }}
+        />
+        <button className="plan-link-add-confirm" onClick={submitNewCategory}>Add</button>
+      </div>
+      <div className="plan-edit-actions">
+        <button className="plan-link-add-confirm" onClick={submit}>Add item</button>
+        <button className="plan-link-cancel" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── PlanSection ──────────────────────────────────────────────────────────
+function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, onEditItem, onReorder, onToggleCategory, onCreateCategory, onCreateGlobalCategory, onMoveItem }) {
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+
+  const handleDrop = (targetId) => {
+    if (dragId === null || dragId === targetId) { setDragOverId(null); return; }
+    const next = [...plan];
+    const fromIdx = next.findIndex(p => p.id === dragId);
+    const toIdx = next.findIndex(p => p.id === targetId);
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    onReorder(next);
+    setDragId(null);
+    setDragOverId(null);
+  };
+
+  const renderItem = (item) => {
+    const link = item.link || (item.links && item.links[0] && item.links[0].url) || null;
+    const tagIds = item.categories || [];
+    const assigned = categories.filter(c => tagIds.includes(c.id));
+    return (
+      <div
+        className={`plan-item ${dragId === item.id ? 'dragging' : ''} ${dragOverId === item.id ? 'drag-over' : ''}`}
+        key={item.id}
+        draggable
+        onDragStart={() => setDragId(item.id)}
+        onDragOver={e => { e.preventDefault(); setDragOverId(item.id); }}
+        onDragLeave={() => setDragOverId(prev => prev === item.id ? null : prev)}
+        onDrop={() => handleDrop(item.id)}
+        onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+      >
+        <span className="plan-drag-handle">⠿</span>
+        <button
+          className={`plan-checkbox-btn ${item.done ? 'checked' : ''}`}
+          onClick={() => onToggle(item.id)}
+        >{item.done ? '✓' : ''}</button>
+        <div className="plan-item-body">
+          {link ? (
+            <a className={`plan-text-link ${item.done ? 'done' : ''}`} href={link} target="_blank" rel="noopener noreferrer">{item.text}</a>
+          ) : (
+            <span className={`plan-text ${item.done ? 'done' : ''}`}>{item.text}</span>
+          )}
+          {assigned.length > 0 && (
+            <div className="plan-tags">
+              {assigned.map(cat => (
+                <span className="plan-tag-pill" key={cat.id} style={{ background: cat.color + '22', color: cat.color }}>{cat.label}</span>
+              ))}
+            </div>
+          )}
+          {editingId === item.id && (
+            <PlanItemEditor
+              item={item}
+              categories={categories}
+              currentChapterId={chapterId}
+              onToggleCategory={catId => onToggleCategory(item.id, catId)}
+              onCreateCategory={label => onCreateCategory(item.id, label)}
+              onSave={updates => onEditItem(item.id, updates)}
+              onDelete={() => { onDelete(item.id); setEditingId(null); }}
+              onMove={toChapterId => onMoveItem(item.id, toChapterId)}
+              onClose={() => setEditingId(null)}
+            />
+          )}
+        </div>
+        <button className="plan-edit-btn" onClick={() => setEditingId(editingId === item.id ? null : item.id)}>✎</button>
+      </div>
+    );
+  };
+
+  const todoItems = plan.filter(item => !item.done);
+  const doneItems = plan.filter(item => item.done);
+
+  return (
+    <div className="plan-section">
+      <div className="section-label">Plan</div>
+      {plan.length === 0 ? (
+        <div className="plan-empty">No plan yet — add what you'd like to work through.</div>
+      ) : (
+        <React.Fragment>
+          <div className="plan-sublabel">To Do</div>
+          {todoItems.length === 0 ? (
+            <div className="plan-empty">Nothing left to do.</div>
+          ) : (
+            <div className="plan-list">{todoItems.map(renderItem)}</div>
+          )}
+          {doneItems.length > 0 && (
+            <React.Fragment>
+              <div className="plan-sublabel">Completed</div>
+              <div className="plan-list">{doneItems.map(renderItem)}</div>
+            </React.Fragment>
+          )}
+        </React.Fragment>
+      )}
+      {adding ? (
+        <PlanAddForm
+          categories={categories}
+          onCreateCategory={onCreateGlobalCategory}
+          onAdd={(text, link, categoryIds) => { onAdd(text, link, categoryIds); setAdding(false); }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : (
+        <button className="plan-add-btn" onClick={() => setAdding(true)}>+ Add plan item</button>
+      )}
+    </div>
+  );
+}
+
+// ── ChapterPage ──────────────────────────────────────────────────────────
+function ChapterPage({ chapter, state, onBack, onUpdate, categories, onToggleCategory, onCreateCategory, onCreateGlobalCategory, onMoveItem }) {
+  const togglePlanItem = (itemId) => {
+    const plan = state.plan.map(p => p.id === itemId ? { ...p, done: !p.done } : p);
+    let status = state.status;
+    const anyDone = plan.some(p => p.done);
+    if (status === 'not_started' && anyDone) status = 'in_progress';
+    if (status === 'in_progress' && !anyDone) status = 'not_started';
+    onUpdate({ ...state, plan, status });
+  };
+
+  const deletePlanItem = (itemId) => {
+    const plan = state.plan.filter(p => p.id !== itemId);
+    onUpdate({ ...state, plan });
+  };
+
+  const addPlanItem = (text, link, categoryIds) => {
+    const plan = [...state.plan, { id: uid(), text, done: false, link: link || null, categories: categoryIds || [], createdAt: new Date().toISOString() }];
+    onUpdate({ ...state, plan });
+  };
+
+  const editPlanItem = (itemId, updates) => {
+    const plan = state.plan.map(p => p.id === itemId ? { ...p, ...updates } : p);
+    onUpdate({ ...state, plan });
+  };
+
+  const reorderPlan = (plan) => {
+    onUpdate({ ...state, plan });
+  };
+
+  const toggleComplete = () => {
+    onUpdate({ ...state, status: state.status === 'complete' ? 'in_progress' : 'complete' });
+  };
+
+  const toggleStar = () => {
+    onUpdate({ ...state, starred: !state.starred });
+  };
+
+  if (!chapter) return null;
+
+  return (
+    <div className="content">
+      <button className="chapter-back-btn" onClick={onBack}>← Back</button>
+      <div className="chapter-page-title-row">
+        <div>
+          <div className="chapter-page-eyebrow">Chapter {String(chapter.id).padStart(2, '0')} · Part {PART_NUMERALS[chapter.part]} — {chapter.partTitle}</div>
+          <div className="chapter-page-title">{chapter.title}</div>
+        </div>
+        <div className="chapter-page-status-row">
+          <button className={`chapter-star-btn ${state.starred ? 'starred' : ''}`} onClick={toggleStar} title={state.starred ? 'Unstar chapter' : 'Star chapter'}>
+            {state.starred ? '★' : '☆'}
+          </button>
+          <button className={`chapter-status-btn ${state.status === 'complete' ? 'is-complete' : ''}`} onClick={toggleComplete}>
+            {state.status === 'complete' ? 'Mark incomplete' : 'Mark complete'}
+          </button>
+        </div>
+      </div>
+      <div className="chapter-page-body">
+        <PlanSection
+          plan={state.plan}
+          categories={categories}
+          chapterId={chapter.id}
+          onToggle={togglePlanItem}
+          onDelete={deletePlanItem}
+          onAdd={addPlanItem}
+          onEditItem={editPlanItem}
+          onReorder={reorderPlan}
+          onToggleCategory={onToggleCategory}
+          onCreateCategory={onCreateCategory}
+          onCreateGlobalCategory={onCreateGlobalCategory}
+          onMoveItem={onMoveItem}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── FocusTab ─────────────────────────────────────────────────────────────
+function FocusTab({ data, onReorder, onToggleStar, onToggleHidden, onOpen }) {
+  const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+
+  const starredIds = CHAPTERS.filter(c => getChapterState(data, c.id).starred).map(c => c.id);
+  const order = data.focusOrder || [];
+  const orderedIds = [...order.filter(id => starredIds.includes(id)), ...starredIds.filter(id => !order.includes(id))];
+  const chapters = orderedIds.map(id => CHAPTERS.find(c => c.id === id)).filter(Boolean);
+
+  const hidden = data.focusHidden || [];
+  const visibleChapters = chapters.filter(c => !hidden.includes(c.id));
+  const hiddenChapters = chapters.filter(c => hidden.includes(c.id));
+
+  const handleDrop = (targetId) => {
+    if (dragId === null || dragId === targetId) { setDragOverId(null); return; }
+    const next = [...orderedIds];
+    const fromIdx = next.indexOf(dragId);
+    const toIdx = next.indexOf(targetId);
+    next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, dragId);
+    onReorder(next);
+    setDragId(null);
+    setDragOverId(null);
+  };
+
+  return (
+    <div>
+      <div className="focus-heading">Current Focus</div>
+      <div className="focus-sub">Your starred chapters — drag to reorder, or hide one temporarily.</div>
+      {chapters.length === 0 ? (
+        <div className="focus-empty">Star chapters from the Map to pin them here.</div>
+      ) : (
+        <React.Fragment>
+          {visibleChapters.length > 0 && (
+            <div className="focus-list">
+              {visibleChapters.map(chapter => {
+                const state = getChapterState(data, chapter.id);
+                const statusClass = state.status === 'in_progress' ? 'in-progress' : state.status === 'complete' ? 'complete' : '';
+                const totalPlan = state.plan.length;
+                const doneCount = state.plan.filter(p => p.done).length;
+                const progress = state.status === 'complete' ? 1 : (totalPlan > 0 ? doneCount / totalPlan : 0);
+                return (
+                  <div
+                    key={chapter.id}
+                    className={`focus-row ${statusClass} ${dragId === chapter.id ? 'dragging' : ''} ${dragOverId === chapter.id ? 'drag-over' : ''}`}
+                    draggable
+                    onDragStart={() => setDragId(chapter.id)}
+                    onDragOver={e => { e.preventDefault(); setDragOverId(chapter.id); }}
+                    onDragLeave={() => setDragOverId(prev => prev === chapter.id ? null : prev)}
+                    onDrop={() => handleDrop(chapter.id)}
+                    onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+                  >
+                    <span className="focus-drag-handle">⠿</span>
+                    <div className="focus-main" onClick={() => onOpen(chapter.id)}>
+                      <div className="focus-number">Chapter {String(chapter.id).padStart(2, '0')}</div>
+                      <div className="focus-title">{chapter.title}</div>
+                      <div className="focus-meta-row">
+                        {statusClass === 'in-progress' && <span className="card-badge in-progress">In Progress</span>}
+                        {statusClass === 'complete' && <span className="card-badge complete">✓ Complete</span>}
+                        <div className="focus-progress-track">
+                          <div className="focus-progress-fill" style={{ width: `${progress * 100}%` }}></div>
+                        </div>
+                        {totalPlan > 0 && <span className="focus-plan-indicator">{doneCount}/{totalPlan} done</span>}
+                      </div>
+                    </div>
+                    <div className="focus-actions">
+                      <button className="focus-vis-btn" onClick={() => onToggleHidden(chapter.id)} title="Hide for now">◉</button>
+                      <button className="focus-star-btn starred" onClick={() => onToggleStar(chapter.id)} title="Remove from focus">★</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {hiddenChapters.length > 0 && (
+            <div className="focus-hidden-strip">
+              {hiddenChapters.map(chapter => (
+                <div key={chapter.id} className="focus-hidden-chip" onClick={() => onToggleHidden(chapter.id)}>
+                  <span>◉</span>
+                  <span>Chapter {chapter.id}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+// ── App ──────────────────────────────────────────────────────────────────
+// ── SyncPanel ────────────────────────────────────────────────────────────
+function SyncPanel({ syncConfig, syncStatus, syncMessage, onSave, onSyncNow, onDisconnect, onClose }) {
+  const [token, setToken] = useState(syncConfig.token);
+  const [gistId, setGistId] = useState(syncConfig.gistId);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => { setGistId(syncConfig.gistId); }, [syncConfig.gistId]);
+
+  const save = () => onSave({ token: token.trim(), gistId: gistId.trim() });
+
+  const copyGistId = () => {
+    navigator.clipboard.writeText(gistId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  const statusLabel = {
+    idle: 'Not connected',
+    syncing: 'Syncing…',
+    synced: 'Synced',
+    error: 'Sync error',
+  }[syncStatus] || 'Not connected';
+
+  return (
+    <div className="sync-popover" onMouseDown={e => e.stopPropagation()}>
+      <div className="plan-edit-label">GitHub sync</div>
+      <div className="sync-popover-hint">
+        Paste a GitHub personal access token with the "gist" scope to sync progress across devices.
+        On the first device, leave Gist ID blank — one is created automatically. Copy that ID into the
+        second device's settings so both use the same gist.
+      </div>
+      <div className="plan-edit-label">Token</div>
+      <input className="plan-link-input" type="password" autoComplete="off" value={token} placeholder="ghp_..." onChange={e => setToken(e.target.value)} />
+      <div className="plan-edit-label">Gist ID</div>
+      <input className="plan-link-input" value={gistId} placeholder="(created automatically)" onChange={e => setGistId(e.target.value)} />
+      {gistId && (
+        <div className="sync-gist-id-row">
+          <code>{gistId}</code>
+          <button className="sync-copy-btn" onClick={copyGistId}>{copied ? 'Copied' : 'Copy'}</button>
+        </div>
+      )}
+      <div className="sync-popover-actions">
+        <button className="plan-link-add-confirm" onClick={save}>Save</button>
+        <button className="plan-link-add-confirm" onClick={onSyncNow} disabled={!token.trim()}>Sync now</button>
+        <button className="plan-link-cancel" onClick={onClose}>Close</button>
+      </div>
+      <div className={`sync-status-line ${syncStatus === 'error' ? 'error' : ''}`}>
+        {statusLabel}{syncMessage ? ` — ${syncMessage}` : ''}
+      </div>
+      {syncConfig.token && (
+        <button className="plan-link-cancel" onClick={onDisconnect}>Disconnect sync</button>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  const [data, setData] = useState(() => loadData());
+  const [activeId, setActiveId] = useState(null);
+  const [tab, setTab] = useState('focus');
+  const [syncConfig, setSyncConfig] = useState(() => loadSyncConfig());
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [syncMessage, setSyncMessage] = useState('');
+  const pushTimer = useRef(null);
+  const skipNextPush = useRef(true);
+
+  useEffect(() => { saveData(data); }, [data]);
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') setActiveId(null); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!syncOpen) return;
+    const handler = (e) => { if (!e.target.closest('.sync-panel-wrap')) setSyncOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [syncOpen]);
+
+  const syncNow = () => {
+    if (!syncConfig.token) return;
+    setSyncStatus('syncing');
+    setSyncMessage('');
+    const ts = Date.now();
+    setLocalTimestamp(ts);
+    pushGistData(syncConfig.token, syncConfig.gistId, { updatedAt: ts, data })
+      .then(res => {
+        setSyncStatus('synced');
+        if (!syncConfig.gistId && res.id) {
+          const next = { ...syncConfig, gistId: res.id };
+          saveSyncConfig(next);
+          setSyncConfig(next);
+        }
+      })
+      .catch(err => { setSyncStatus('error'); setSyncMessage(err.message); });
+  };
+
+  // Pull latest progress on load (or when sync settings change)
+  useEffect(() => {
+    if (!syncConfig.token || !syncConfig.gistId) return;
+    let cancelled = false;
+    setSyncStatus('syncing');
+    setSyncMessage('');
+    fetchGistData(syncConfig.token, syncConfig.gistId)
+      .then(remote => {
+        if (cancelled) return;
+        if (remote && remote.data && (remote.updatedAt || 0) > getLocalTimestamp()) {
+          skipNextPush.current = true;
+          setLocalTimestamp(remote.updatedAt);
+          setData(remote.data);
+        }
+        setSyncStatus('synced');
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setSyncStatus('error');
+        setSyncMessage(err.message);
+      });
+    return () => { cancelled = true; };
+  }, [syncConfig.token, syncConfig.gistId]);
+
+  // Push changes to gist (debounced)
+  useEffect(() => {
+    if (!syncConfig.token) return;
+    if (skipNextPush.current) { skipNextPush.current = false; return; }
+    const ts = Date.now();
+    setLocalTimestamp(ts);
+    setSyncStatus('syncing');
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(() => {
+      pushGistData(syncConfig.token, syncConfig.gistId, { updatedAt: ts, data })
+        .then(res => {
+          setSyncStatus('synced');
+          if (!syncConfig.gistId && res.id) {
+            const next = { ...syncConfig, gistId: res.id };
+            saveSyncConfig(next);
+            setSyncConfig(next);
+          }
+        })
+        .catch(err => { setSyncStatus('error'); setSyncMessage(err.message); });
+    }, 1500);
+  }, [data, syncConfig.token]);
+
+  const openChapter = (id) => {
+    setActiveId(id);
+  };
+
+  const updateChapter = (id, nextState) => {
+    setData(d => ({ ...d, chapters: { ...d.chapters, [id]: nextState } }));
+  };
+
+  const toggleStar = (id) => {
+    const state = getChapterState(data, id);
+    updateChapter(id, { ...state, starred: !state.starred });
+  };
+
+  const setFocusOrder = (order) => {
+    setData(d => ({ ...d, focusOrder: order }));
+  };
+
+  const toggleFocusHidden = (id) => {
+    setData(d => {
+      const hidden = d.focusHidden || [];
+      const next = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
+      return { ...d, focusHidden: next };
+    });
+  };
+
+  const toggleItemCategory = (chapterId, itemId, categoryId) => {
+    setData(d => {
+      const chState = getChapterState(d, chapterId);
+      const plan = chState.plan.map(p => {
+        if (p.id !== itemId) return p;
+        const cats = p.categories || [];
+        const next = cats.includes(categoryId) ? cats.filter(c => c !== categoryId) : [...cats, categoryId];
+        return { ...p, categories: next };
+      });
+      return { ...d, chapters: { ...d.chapters, [chapterId]: { ...chState, plan } } };
+    });
+  };
+
+  const createAndTagCategory = (chapterId, itemId, label) => {
+    setData(d => {
+      const categories = d.categories || [];
+      const newCat = { id: uid(), label, color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length] };
+      const chState = getChapterState(d, chapterId);
+      const plan = chState.plan.map(p => p.id === itemId ? { ...p, categories: [...(p.categories || []), newCat.id] } : p);
+      return { ...d, categories: [...categories, newCat], chapters: { ...d.chapters, [chapterId]: { ...chState, plan } } };
+    });
+  };
+
+  const createCategory = (label) => {
+    const categories = data.categories || [];
+    const newCat = { id: uid(), label, color: CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length] };
+    setData(d => ({ ...d, categories: [...(d.categories || []), newCat] }));
+    return newCat.id;
+  };
+
+  const movePlanItem = (fromChapterId, itemId, toChapterId) => {
+    setData(d => {
+      const fromState = getChapterState(d, fromChapterId);
+      const item = fromState.plan.find(p => p.id === itemId);
+      if (!item) return d;
+      const fromPlan = fromState.plan.filter(p => p.id !== itemId);
+      const toState = getChapterState(d, toChapterId);
+      const toPlan = [...toState.plan, item];
+      return {
+        ...d,
+        chapters: {
+          ...d.chapters,
+          [fromChapterId]: { ...fromState, plan: fromPlan },
+          [toChapterId]: { ...toState, plan: toPlan },
+        },
+      };
+    });
+  };
+
+  const completeCount = CHAPTERS.filter(c => getChapterState(data, c.id).status === 'complete').length;
+
+  const parts = [...new Set(CHAPTERS.map(c => c.part))].map(partNum => ({
+    num: partNum,
+    title: CHAPTERS.find(c => c.part === partNum).partTitle,
+    chapters: CHAPTERS.filter(c => c.part === partNum),
+  }));
+
+  const activeChapter = CHAPTERS.find(c => c.id === activeId) || null;
+  const activeState = activeChapter ? getChapterState(data, activeChapter.id) : null;
+
+  return (
+    <div>
+      <div className="header">
+        <div className="header-left">
+          <span className="header-title">CSCS</span>
+          <span className="header-date">{fmtHeaderDate()}</span>
+        </div>
+        <div className="header-right">
+          {!activeChapter && (
+            <React.Fragment>
+              <div className="tab-group">
+                <button className={`tab-btn ${tab === 'focus' ? 'active' : ''}`} onMouseDown={e => e.preventDefault()} onClick={() => setTab('focus')}>Focus</button>
+                <button className={`tab-btn ${tab === 'map' ? 'active' : ''}`} onMouseDown={e => e.preventDefault()} onClick={() => setTab('map')}>Map</button>
+              </div>
+              <div className="header-count">{completeCount} chapters complete of {CHAPTERS.length}</div>
+            </React.Fragment>
+          )}
+          <div className="sync-panel-wrap">
+            <button className="sync-btn" onClick={() => setSyncOpen(o => !o)}>
+              <span className={`sync-dot ${syncStatus}`}></span>
+              Sync
+            </button>
+            {syncOpen && (
+              <SyncPanel
+                syncConfig={syncConfig}
+                syncStatus={syncStatus}
+                syncMessage={syncMessage}
+                onSave={(cfg) => { saveSyncConfig(cfg); setSyncConfig(cfg); }}
+                onSyncNow={syncNow}
+                onDisconnect={() => {
+                  const empty = { token: '', gistId: '' };
+                  saveSyncConfig(empty);
+                  setSyncConfig(empty);
+                  setSyncStatus('idle');
+                  setSyncMessage('');
+                  setSyncOpen(false);
+                }}
+                onClose={() => setSyncOpen(false)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+      {activeChapter ? (
+        <ChapterPage
+          chapter={activeChapter}
+          state={activeState}
+          onBack={() => setActiveId(null)}
+          onUpdate={(next) => updateChapter(activeChapter.id, next)}
+          categories={data.categories || []}
+          onToggleCategory={(itemId, catId) => toggleItemCategory(activeChapter.id, itemId, catId)}
+          onCreateCategory={(itemId, label) => createAndTagCategory(activeChapter.id, itemId, label)}
+          onCreateGlobalCategory={createCategory}
+          onMoveItem={(itemId, toChapterId) => movePlanItem(activeChapter.id, itemId, toChapterId)}
+        />
+      ) : (
+        <React.Fragment>
+          {tab === 'focus' && (
+            <div className="content">
+              <FocusTab
+                data={data}
+                onReorder={setFocusOrder}
+                onToggleStar={toggleStar}
+                onToggleHidden={toggleFocusHidden}
+                onOpen={openChapter}
+              />
+            </div>
+          )}
+          {tab === 'map' && (
+            <div className="content">
+              {parts.map(part => (
+                <div className="part-section" key={part.num}>
+                  <div className="part-eyebrow">Part {PART_NUMERALS[part.num]} — {part.title}</div>
+                  <div className="part-line"></div>
+                  <div className="card-row">
+                    {part.chapters.map(chapter => (
+                      <ChapterCard
+                        key={chapter.id}
+                        chapter={chapter}
+                        state={getChapterState(data, chapter.id)}
+                        onClick={() => openChapter(chapter.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
