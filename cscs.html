@@ -215,6 +215,7 @@
     color: var(--text-muted); font-weight: 500; margin: 0.9rem 0 0.4rem;
   }
   .plan-sublabel:first-of-type { margin-top: 0; }
+  .plan-totals { font-size: 11px; color: var(--text-muted); margin: -0.2rem 0 0.5rem; }
   .plan-list { display: flex; flex-direction: column; }
   .plan-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-radius: 6px; transition: opacity 0.15s, background 0.15s; }
   .plan-item.dragging { opacity: 0.4; }
@@ -432,7 +433,7 @@
     /* Larger text overall for readability */
     body { font-size: 18px; }
     .card-title { font-size: 15px; }
-    .focus-sub, .focus-empty, .plan-empty { font-size: 15px; }
+    .focus-sub, .focus-empty, .plan-empty, .plan-totals { font-size: 15px; }
     .chapter-status-btn { font-size: 15px; }
     .card-number, .focus-number, .card-plan-indicator, .focus-plan-indicator { font-size: 13px; }
     .section-label, .plan-sublabel, .chapter-page-eyebrow, .plan-edit-label { font-size: 12px; }
@@ -495,6 +496,48 @@ function uid() {
 function fmtHeaderDate() {
   const d = new Date();
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ── Estimate parsing/formatting (e.g. "15 mins", "12 pgs") ────────────────
+function parseEstimate(str) {
+  const result = { mins: 0, pgs: 0 };
+  if (!str) return result;
+  const re = /(\d+(?:\.\d+)?)\s*(hrs?|hours?|mins?|minutes?|pgs?|pages?)/gi;
+  let m;
+  while ((m = re.exec(str))) {
+    const val = parseFloat(m[1]);
+    const unit = m[2].toLowerCase();
+    if (unit.startsWith('h')) result.mins += val * 60;
+    else if (unit.startsWith('m')) result.mins += val;
+    else if (unit.startsWith('p')) result.pgs += val;
+  }
+  return result;
+}
+
+function sumEstimates(items) {
+  return items.reduce((acc, item) => {
+    const { mins, pgs } = parseEstimate(item.estimate);
+    return { mins: acc.mins + mins, pgs: acc.pgs + pgs };
+  }, { mins: 0, pgs: 0 });
+}
+
+function formatEstimateTotals({ mins, pgs }) {
+  const parts = [];
+  if (mins > 0) {
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const m = Math.round(mins % 60);
+      parts.push(m > 0 ? `${h}h ${m}m` : `${h}h`);
+    } else {
+      const rounded = Math.round(mins * 10) / 10;
+      parts.push(`${rounded} min${rounded === 1 ? '' : 's'}`);
+    }
+  }
+  if (pgs > 0) {
+    const rounded = Math.round(pgs * 10) / 10;
+    parts.push(`${rounded} pg${rounded === 1 ? '' : 's'}`);
+  }
+  return parts.join(' · ');
 }
 
 function loadData() {
@@ -901,6 +944,8 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
 
   const todoItems = plan.filter(item => !item.done);
   const doneItems = plan.filter(item => item.done);
+  const todoTotals = sumEstimates(todoItems);
+  const todoTotalsLabel = formatEstimateTotals(todoTotals);
 
   return (
     <div className="plan-section">
@@ -910,6 +955,7 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
       ) : (
         <React.Fragment>
           <div className="plan-sublabel">To Do</div>
+          {todoTotalsLabel && <div className="plan-totals">Total: {todoTotalsLabel}</div>}
           {todoItems.length === 0 ? (
             <div className="plan-empty">Nothing left to do.</div>
           ) : (
