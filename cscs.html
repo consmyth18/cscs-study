@@ -99,6 +99,14 @@
   .sync-copy-btn:hover { border-color: var(--border2); }
   .sync-status-line { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
   .sync-status-line.error { color: #c0392b; }
+  .sync-textarea {
+    width: 100%; resize: vertical; min-height: 60px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); padding: 5px 9px; font-size: 11px;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.15s;
+  }
+  .sync-textarea:focus { border-color: var(--blue-mid); }
+  .sync-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
 
   /* Content / map */
   .content { max-width: 1000px; margin: 0 auto; padding: 2rem; }
@@ -942,10 +950,13 @@ function FocusTab({ data, onReorder, onToggleStar, onToggleHidden, onOpen }) {
 
 // ── App ──────────────────────────────────────────────────────────────────
 // ── SyncPanel ────────────────────────────────────────────────────────────
-function SyncPanel({ syncConfig, syncStatus, syncMessage, onSave, onSyncNow, onDisconnect, onClose }) {
+function SyncPanel({ syncConfig, syncStatus, syncMessage, data, onSave, onSyncNow, onDisconnect, onImport, onClose }) {
   const [token, setToken] = useState(syncConfig.token);
   const [gistId, setGistId] = useState(syncConfig.gistId);
   const [copied, setCopied] = useState(false);
+  const [exportCopied, setExportCopied] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState('');
 
   useEffect(() => { setGistId(syncConfig.gistId); }, [syncConfig.gistId]);
 
@@ -956,6 +967,25 @@ function SyncPanel({ syncConfig, syncStatus, syncMessage, onSave, onSyncNow, onD
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
+  };
+
+  const exportData = () => {
+    navigator.clipboard.writeText(JSON.stringify(data)).then(() => {
+      setExportCopied(true);
+      setTimeout(() => setExportCopied(false), 1500);
+    });
+  };
+
+  const doImport = () => {
+    try {
+      const parsed = JSON.parse(importText.trim());
+      if (!parsed || typeof parsed !== 'object' || !parsed.chapters) throw new Error('bad shape');
+      onImport(parsed);
+      setImportText('');
+      setImportError('');
+    } catch (e) {
+      setImportError('That doesn\'t look like valid exported data.');
+    }
   };
 
   const statusLabel = {
@@ -994,6 +1024,19 @@ function SyncPanel({ syncConfig, syncStatus, syncMessage, onSave, onSyncNow, onD
       {syncConfig.token && (
         <button className="plan-link-cancel" onClick={onDisconnect}>Disconnect sync</button>
       )}
+      <hr className="sync-divider" />
+      <div className="plan-edit-label">Backup / transfer</div>
+      <div className="sync-popover-hint">
+        On your other device, copy your current progress and paste it below to load it here.
+      </div>
+      <div className="sync-popover-actions">
+        <button className="plan-link-add-confirm" onClick={exportData}>{exportCopied ? 'Copied!' : 'Copy current data'}</button>
+      </div>
+      <textarea className="sync-textarea" placeholder="Paste copied data here" value={importText} onChange={e => setImportText(e.target.value)}></textarea>
+      <div className="sync-popover-actions">
+        <button className="plan-link-add-confirm" onClick={doImport} disabled={!importText.trim()}>Import</button>
+      </div>
+      {importError && <div className="sync-status-line error">{importError}</div>}
     </div>
   );
 }
@@ -1200,6 +1243,8 @@ function App() {
                 syncConfig={syncConfig}
                 syncStatus={syncStatus}
                 syncMessage={syncMessage}
+                data={data}
+                onImport={(parsed) => setData(parsed)}
                 onSave={(cfg) => { saveSyncConfig(cfg); setSyncConfig(cfg); }}
                 onSyncNow={syncNow}
                 onDisconnect={() => {
