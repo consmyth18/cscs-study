@@ -675,8 +675,9 @@ function getChapterState(data, id) {
 // ── ChapterCard ──────────────────────────────────────────────────────────
 function ChapterCard({ chapter, state, onClick }) {
   const status = state.status;
-  const totalPlan = state.plan.length;
-  const doneCount = state.plan.filter(p => p.done).length;
+  const corePlan = state.plan.filter(p => p.core !== false);
+  const totalPlan = corePlan.length;
+  const doneCount = corePlan.filter(p => p.done).length;
   const progress = status === 'complete' ? 1 : (totalPlan > 0 ? doneCount / totalPlan : 0);
 
   return (
@@ -699,6 +700,7 @@ function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, 
   const [text, setText] = useState(item.text);
   const [link, setLink] = useState(item.link || (item.links && item.links[0] && item.links[0].url) || '');
   const [estimate, setEstimate] = useState(item.estimate || '');
+  const [core, setCore] = useState(item.core !== false);
   const [newLabel, setNewLabel] = useState('');
   const [moveTarget, setMoveTarget] = useState('');
   const tagIds = item.categories || [];
@@ -707,7 +709,7 @@ function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, 
   const save = () => {
     const t = text.trim();
     if (!t) return;
-    onSave({ text: t, link: link.trim() || null, estimate: estimate.trim() || null });
+    onSave({ text: t, link: link.trim() || null, estimate: estimate.trim() || null, core });
     onClose();
   };
 
@@ -731,6 +733,19 @@ function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, 
       <input className="plan-link-input" value={link} placeholder="https://..." onChange={e => setLink(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Estimate</div>
       <input className="plan-link-input" value={estimate} placeholder="e.g. 12 pages, 15 min video" onChange={e => setEstimate(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Type</div>
+      <div className="plan-tag-options">
+        <button
+          className="plan-tag-option"
+          style={core ? { background: 'var(--blue-light)', color: 'var(--blue-text)', borderColor: 'var(--blue-mid)' } : {}}
+          onClick={() => setCore(true)}
+        >Core</button>
+        <button
+          className="plan-tag-option"
+          style={!core ? { background: 'var(--blue-light)', color: 'var(--blue-text)', borderColor: 'var(--blue-mid)' } : {}}
+          onClick={() => setCore(false)}
+        >Optional</button>
+      </div>
       <div className="plan-edit-label">Tags</div>
       {categories.length > 0 && (
         <div className="plan-tag-options">
@@ -782,6 +797,7 @@ function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
   const [text, setText] = useState('');
   const [link, setLink] = useState('');
   const [estimate, setEstimate] = useState('');
+  const [core, setCore] = useState(true);
   const [selected, setSelected] = useState([]);
   const [newLabel, setNewLabel] = useState('');
 
@@ -800,10 +816,11 @@ function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
   const submit = () => {
     const t = text.trim();
     if (!t) return;
-    onAdd(t, link.trim() || null, selected, estimate.trim() || null);
+    onAdd(t, link.trim() || null, selected, estimate.trim() || null, core);
     setText('');
     setLink('');
     setEstimate('');
+    setCore(true);
     setSelected([]);
     setNewLabel('');
   };
@@ -816,11 +833,24 @@ function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
   return (
     <div className="plan-edit-popover plan-add-popover">
       <div className="plan-edit-label">Task</div>
-      <input className="plan-link-input" autoFocus value={text} placeholder="Plan item..." onChange={e => setText(e.target.value)} onKeyDown={onKeyDown} />
+      <input className="plan-link-input" autoFocus value={text} placeholder="Resource..." onChange={e => setText(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Link</div>
       <input className="plan-link-input" value={link} placeholder="https://..." onChange={e => setLink(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Estimate</div>
       <input className="plan-link-input" value={estimate} placeholder="e.g. 12 pages, 15 min video" onChange={e => setEstimate(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Type</div>
+      <div className="plan-tag-options">
+        <button
+          className="plan-tag-option"
+          style={core ? { background: 'var(--blue-light)', color: 'var(--blue-text)', borderColor: 'var(--blue-mid)' } : {}}
+          onClick={() => setCore(true)}
+        >Core</button>
+        <button
+          className="plan-tag-option"
+          style={!core ? { background: 'var(--blue-light)', color: 'var(--blue-text)', borderColor: 'var(--blue-mid)' } : {}}
+          onClick={() => setCore(false)}
+        >Optional</button>
+      </div>
       <div className="plan-edit-label">Tags</div>
       {categories.length > 0 && (
         <div className="plan-tag-options">
@@ -947,26 +977,35 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
     );
   };
 
-  const todoItems = plan.filter(item => !item.done);
-  const doneItems = plan.filter(item => item.done);
-  const todoTotalsLabel = formatEstimateTotals(sumEstimates(todoItems));
-  const doneTotalsLabel = formatEstimateTotals(sumEstimates(doneItems));
+  const coreItems = plan.filter(item => item.core !== false);
+  const optionalItems = plan.filter(item => item.core === false);
+  const coreTotalsLabel = formatEstimateTotals(sumEstimates(coreItems.filter(item => !item.done)));
+  const optionalTotalsLabel = formatEstimateTotals(sumEstimates(optionalItems.filter(item => !item.done)));
 
   return (
     <div className="plan-section">
-      <div className="section-label">Plan</div>
+      <div className="section-label">Resources</div>
       {plan.length === 0 ? (
-        <div className="plan-empty">No plan yet — add what you'd like to work through.</div>
+        <div className="plan-empty">No resources yet — add what you'd like to work through.</div>
       ) : (
         <React.Fragment>
           <div className="plan-sublabel-row">
-            <div className="plan-sublabel">To Do</div>
-            {todoTotalsLabel && <div className="plan-totals">— {todoTotalsLabel}</div>}
+            <div className="plan-sublabel">Core</div>
+            {coreTotalsLabel && <div className="plan-totals">— {coreTotalsLabel}</div>}
           </div>
-          {todoItems.length === 0 ? (
-            <div className="plan-empty">Nothing left to do.</div>
+          {coreItems.length === 0 ? (
+            <div className="plan-empty">No core resources yet.</div>
           ) : (
-            <div className="plan-list">{todoItems.map(item => renderItem(item, todoItems))}</div>
+            <div className="plan-list">{coreItems.map(item => renderItem(item, coreItems))}</div>
+          )}
+          {optionalItems.length > 0 && (
+            <React.Fragment>
+              <div className="plan-sublabel-row">
+                <div className="plan-sublabel">Optional</div>
+                {optionalTotalsLabel && <div className="plan-totals">— {optionalTotalsLabel}</div>}
+              </div>
+              <div className="plan-list">{optionalItems.map(item => renderItem(item, optionalItems))}</div>
+            </React.Fragment>
           )}
         </React.Fragment>
       )}
@@ -974,20 +1013,11 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         <PlanAddForm
           categories={categories}
           onCreateCategory={onCreateGlobalCategory}
-          onAdd={(text, link, categoryIds, estimate) => { onAdd(text, link, categoryIds, estimate); setAdding(false); }}
+          onAdd={(text, link, categoryIds, estimate, core) => { onAdd(text, link, categoryIds, estimate, core); setAdding(false); }}
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <button className="plan-add-btn" onClick={() => setAdding(true)}>+ Add plan item</button>
-      )}
-      {doneItems.length > 0 && (
-        <React.Fragment>
-          <div className="plan-sublabel-row">
-            <div className="plan-sublabel">Completed</div>
-            {doneTotalsLabel && <div className="plan-totals">— {doneTotalsLabel}</div>}
-          </div>
-          <div className="plan-list">{doneItems.map(item => renderItem(item, doneItems))}</div>
-        </React.Fragment>
+        <button className="plan-add-btn" onClick={() => setAdding(true)}>+ Add resource</button>
       )}
     </div>
   );
@@ -1009,8 +1039,8 @@ function ChapterPage({ chapter, state, onBack, onUpdate, categories, onToggleCat
     onUpdate({ ...state, plan });
   };
 
-  const addPlanItem = (text, link, categoryIds, estimate) => {
-    const plan = [...state.plan, { id: uid(), text, done: false, link: link || null, estimate: estimate || null, categories: categoryIds || [], createdAt: new Date().toISOString() }];
+  const addPlanItem = (text, link, categoryIds, estimate, core) => {
+    const plan = [...state.plan, { id: uid(), text, done: false, link: link || null, estimate: estimate || null, categories: categoryIds || [], core: core !== false, createdAt: new Date().toISOString() }];
     onUpdate({ ...state, plan });
   };
 
@@ -1121,8 +1151,9 @@ function FocusTab({ data, onReorder, onToggleStar, onToggleHidden, onOpen }) {
               {visibleChapters.map((chapter, idx) => {
                 const state = getChapterState(data, chapter.id);
                 const statusClass = state.status === 'in_progress' ? 'in-progress' : state.status === 'complete' ? 'complete' : '';
-                const totalPlan = state.plan.length;
-                const doneCount = state.plan.filter(p => p.done).length;
+                const corePlan = state.plan.filter(p => p.core !== false);
+                const totalPlan = corePlan.length;
+                const doneCount = corePlan.filter(p => p.done).length;
                 const progress = state.status === 'complete' ? 1 : (totalPlan > 0 ? doneCount / totalPlan : 0);
                 return (
                   <div
