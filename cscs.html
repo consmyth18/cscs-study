@@ -299,6 +299,11 @@
     display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500;
     padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em;
   }
+  .plan-estimate {
+    display: inline-flex; align-items: center; font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em;
+    background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border2);
+  }
   .plan-tag-options { display: flex; flex-wrap: wrap; gap: 5px; }
   .plan-tag-option {
     font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px;
@@ -424,7 +429,7 @@
     .chapter-status-btn { font-size: 15px; }
     .card-number, .focus-number, .card-plan-indicator, .focus-plan-indicator { font-size: 13px; }
     .section-label, .plan-sublabel, .chapter-page-eyebrow, .plan-edit-label { font-size: 12px; }
-    .plan-tag-option, .plan-tag-pill { font-size: 13px; }
+    .plan-tag-option, .plan-tag-pill, .plan-estimate { font-size: 13px; }
     .tab-btn { font-size: 14px; }
     .plan-link-input, .plan-move-select, .sync-textarea { font-size: 16px; }
   }
@@ -634,6 +639,7 @@ function ChapterCard({ chapter, state, onClick }) {
 function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, onCreateCategory, onSave, onDelete, onMove, onClose }) {
   const [text, setText] = useState(item.text);
   const [link, setLink] = useState(item.link || (item.links && item.links[0] && item.links[0].url) || '');
+  const [estimate, setEstimate] = useState(item.estimate || '');
   const [newLabel, setNewLabel] = useState('');
   const [moveTarget, setMoveTarget] = useState('');
   const tagIds = item.categories || [];
@@ -642,7 +648,7 @@ function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, 
   const save = () => {
     const t = text.trim();
     if (!t) return;
-    onSave({ text: t, link: link.trim() || null });
+    onSave({ text: t, link: link.trim() || null, estimate: estimate.trim() || null });
     onClose();
   };
 
@@ -664,6 +670,8 @@ function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, 
       <input className="plan-link-input" autoFocus value={text} onChange={e => setText(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Link</div>
       <input className="plan-link-input" value={link} placeholder="https://..." onChange={e => setLink(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Estimate</div>
+      <input className="plan-link-input" value={estimate} placeholder="e.g. 12 pages, 15 min video" onChange={e => setEstimate(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Tags</div>
       {categories.length > 0 && (
         <div className="plan-tag-options">
@@ -714,6 +722,7 @@ function PlanItemEditor({ item, categories, currentChapterId, onToggleCategory, 
 function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
   const [text, setText] = useState('');
   const [link, setLink] = useState('');
+  const [estimate, setEstimate] = useState('');
   const [selected, setSelected] = useState([]);
   const [newLabel, setNewLabel] = useState('');
 
@@ -732,9 +741,10 @@ function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
   const submit = () => {
     const t = text.trim();
     if (!t) return;
-    onAdd(t, link.trim() || null, selected);
+    onAdd(t, link.trim() || null, selected, estimate.trim() || null);
     setText('');
     setLink('');
+    setEstimate('');
     setSelected([]);
     setNewLabel('');
   };
@@ -750,6 +760,8 @@ function PlanAddForm({ categories, onCreateCategory, onAdd, onCancel }) {
       <input className="plan-link-input" autoFocus value={text} placeholder="Plan item..." onChange={e => setText(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Link</div>
       <input className="plan-link-input" value={link} placeholder="https://..." onChange={e => setLink(e.target.value)} onKeyDown={onKeyDown} />
+      <div className="plan-edit-label">Estimate</div>
+      <input className="plan-link-input" value={estimate} placeholder="e.g. 12 pages, 15 min video" onChange={e => setEstimate(e.target.value)} onKeyDown={onKeyDown} />
       <div className="plan-edit-label">Tags</div>
       {categories.length > 0 && (
         <div className="plan-tag-options">
@@ -849,8 +861,9 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
           ) : (
             <span className={`plan-text ${item.done ? 'done' : ''}`}>{item.text}</span>
           )}
-          {assigned.length > 0 && (
+          {(item.estimate || assigned.length > 0) && (
             <div className="plan-tags">
+              {item.estimate && <span className="plan-estimate">{item.estimate}</span>}
               {assigned.map(cat => (
                 <span className="plan-tag-pill" key={cat.id} style={{ background: cat.color + '22', color: cat.color }}>{cat.label}</span>
               ))}
@@ -903,7 +916,7 @@ function PlanSection({ plan, categories, chapterId, onToggle, onDelete, onAdd, o
         <PlanAddForm
           categories={categories}
           onCreateCategory={onCreateGlobalCategory}
-          onAdd={(text, link, categoryIds) => { onAdd(text, link, categoryIds); setAdding(false); }}
+          onAdd={(text, link, categoryIds, estimate) => { onAdd(text, link, categoryIds, estimate); setAdding(false); }}
           onCancel={() => setAdding(false)}
         />
       ) : (
@@ -929,8 +942,8 @@ function ChapterPage({ chapter, state, onBack, onUpdate, categories, onToggleCat
     onUpdate({ ...state, plan });
   };
 
-  const addPlanItem = (text, link, categoryIds) => {
-    const plan = [...state.plan, { id: uid(), text, done: false, link: link || null, categories: categoryIds || [], createdAt: new Date().toISOString() }];
+  const addPlanItem = (text, link, categoryIds, estimate) => {
+    const plan = [...state.plan, { id: uid(), text, done: false, link: link || null, estimate: estimate || null, categories: categoryIds || [], createdAt: new Date().toISOString() }];
     onUpdate({ ...state, plan });
   };
 
